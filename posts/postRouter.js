@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Posts = require("./postModel");
 
-router.use(express.json());
+// router.use(express.json());
 
 //GETS ALL POSTS
 
@@ -60,6 +60,7 @@ router.post("/v2", (req, res) => {
 ///post by id returns id of post instead of doing it through the model chaing a .then on the .then destructuring
 router.post("/v1", (req, res) => {
   const post = req.body;
+
   if (!post.title || !post.contents) {
     res.status(400).json({
       errorMessage: "body must contain a post.title and post.contents",
@@ -83,6 +84,36 @@ router.post("/v1", (req, res) => {
   }
 });
 
+// get comments for post id
+router.get("/:id/comments", (req, res) => {
+  const { id } = req.params;
+  Posts.findById(id)
+    .then((post) => {
+      if (post.length < 1) {
+        res.status(404).json({ errorMessage: "no post by that id was found" });
+      }
+    })
+    .catch((error) => {
+      error;
+    });
+  Posts.findPostComments(id)
+    .then((comments) => {
+      if (comments) {
+        res.status(200).json(comments);
+      } else {
+        res.status(404).json({ message: "comment by that id was not found" });
+      }
+    })
+    .catch((error) => {
+      console.log("error retrieveing comments", error);
+      res.status(500).json({
+        errorMessage:
+          "there wasn an error trying to retrieve that comment info",
+      });
+    });
+});
+
+//When the client makes a GET request to /api/posts/:id/comments:
 router.post("/:id/comments", (req, res) => {
   const { id } = req.params;
   Posts.findById(id)
@@ -134,25 +165,31 @@ router.put("/:id", (req, res) => {
     });
 });
 
-router.get("/:id/comments", (req, res) => {
+router.delete("/:id", (req, res) => {
   const { id } = req.params;
-  Posts.findPostComments(id)
-    .then((comments) => {
-      res.status(200).json(comments);
+  Posts.findById(id)
+    .then((post) => {
+      if (post.length < 1) {
+        res.status(404).json({ errorMessage: "no post by that id was found" });
+      } else {
+        Posts.remove(id)
+          .then((removed) => {
+            if (removed) {
+              res.status(404).json({ message: "post deleted", removed });
+            } else {
+              res.status(200).json({ message: "post not found" });
+            }
+          })
+          .catch((error) => {
+            console.log(error.message);
+            res.status(500).json({ message: "error updating db", error });
+          });
+      }
     })
     .catch((error) => {
       console.log(error.message);
-      res.status(500).json({ message: "errro gettting comments" });
+      res.status(500).json({ message: "error updating db", error });
     });
 });
 
-router.delete("/:id", (req, res) => {
-  Posts.remove(req.params.id).then((removed) => {
-    if (removed) {
-      res.status(404).json({ message: `deleted ${removed} post` });
-    } else {
-      res.status(200).json({ message: "post not found" });
-    }
-  });
-});
 module.exports = router;
