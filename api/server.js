@@ -7,8 +7,9 @@ const postsRouter = require("../posts/postRouter");
 
 const server = express();
 
-server.use("/api/posts", postsRouter);
 server.use(helmet(), cors(), morgan("dev"), express.json());
+
+server.use("/api/posts", postsRouter);
 
 server.get("/", (req, res) => {
   res.status(200).json({ message: "you connected to the server successfully" });
